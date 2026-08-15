@@ -1,0 +1,2 @@
+# Nepal GeoGuessr uses only the Python standard library — nothing to install.
+# Run:  python app.py   (inside the .venv)

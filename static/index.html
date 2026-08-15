@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nepal GeoGuessr — Find the Spot in Kathmandu</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏔️</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.css" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- START SCREEN -->
+  <section id="start-screen" class="screen active">
+    <div class="start-card glass">
+      <div class="start-badge">🏔️</div>
+      <h1>Nepal <span>GeoGuessr</span></h1>
+      <p class="subtitle">You're dropped into a street in Kathmandu. Figure out where you are, drop a pin, and score!</p>
+      <div class="rules">
+        <div class="rule"><span class="rule-ico">🚶</span> Random street view spawns in Kathmandu</div>
+        <div class="rule"><span class="rule-ico">🎯</span> 5,000 points if you're within 50 m</div>
+        <div class="rule"><span class="rule-ico">⏱️</span> 45 seconds per round</div>
+        <div class="rule"><span class="rule-ico">🗺️</span> Switch to satellite view to find clues</div>
+      </div>
+      <button id="start-btn" class="btn-primary">Start Game</button>
+      <p id="mode-note" class="mode-note"></p>
+    </div>
+  </section>
+
+  <!-- GAME SCREEN -->
+  <section id="game-screen" class="screen">
+    <div id="street-wrap">
+      <div id="street-view"></div>
+      <div id="street-note" class="hidden">
+        <div class="note-ico">🛰️</div>
+        <p>Street view isn't available yet.</p>
+        <p class="note-sub">Add a free Mapillary token in <code>config.py</code> to enable it.</p>
+      </div>
+      <div id="street-label" class="glass">📍 Street View</div>
+    </div>
+
+    <div id="map-shell">
+      <div id="map"></div>
+      <button id="map-expand-btn" title="Enlarge map">⛶</button>
+    </div>
+
+    <div id="hud" class="glass">
+      <div class="hud-row">
+        <div class="hud-round">Round <strong id="round-label">1</strong><span>/5</span></div>
+        <div class="hud-score">Score <strong id="score-label">0</strong></div>
+        <div id="timer" class="hud-timer">
+          <svg viewBox="0 0 36 36">
+            <circle class="ring-bg" cx="18" cy="18" r="15.9" />
+            <circle id="ring-progress" class="ring-fg" cx="18" cy="18" r="15.9" />
+          </svg>
+          <span id="timer-label">45</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="hint-card" class="glass">
+      <div class="hint-title">💡 Hint</div>
+      <p id="hint-text">Look around the street view, then click the map to drop your pin!</p>
+    </div>
+
+    <div id="guess-bar" class="glass">
+      <button id="submit-btn" class="btn-primary" disabled>Confirm Guess</button>
+    </div>
+
+    <button id="layer-toggle" class="glass layer-btn" title="Switch basemap">
+      <span id="layer-ico">🛰️</span>
+    </button>
+  </section>
+
+  <!-- RESULT OVERLAY (full-screen guess vs actual, shown for 5s) -->
+  <div id="result-overlay" class="overlay">
+    <div class="result-head glass">
+      <div class="result-labels">
+        <span class="result-label label-guess">📍 Your Guess</span>
+        <span class="result-label label-actual">🎯 Actual Spot</span>
+      </div>
+      <div class="result-score">
+        <span class="rs-points" id="result-points">+0</span>
+        <span class="rs-dist" id="result-distance">—</span>
+      </div>
+    </div>
+    <div id="result-map"></div>
+    <button id="result-next-btn" class="btn-primary result-next-btn">Next Round</button>
+  </div>
+
+  <!-- REVEAL OVERLAY -->
+  <div id="reveal-overlay" class="overlay">
+    <div class="reveal-card glass">
+      <div class="reveal-head">
+        <div class="place-emoji" id="place-emoji">📍</div>
+        <h2 id="place-name">The Spot</h2>
+        <p id="distance-label">1,234 m away</p>
+      </div>
+      <div class="points-earned" id="points-earned">+0</div>
+      <div class="round-summary">
+        <div class="stat"><span>Your guess</span><strong id="stat-guess">—</strong></div>
+        <div class="stat"><span>Actual spot</span><strong id="stat-actual">—</strong></div>
+      </div>
+      <button id="next-btn" class="btn-primary">Next Round</button>
+    </div>
+  </div>
+
+  <!-- END SCREEN -->
+  <section id="end-screen" class="screen">
+    <div class="end-card glass">
+      <div class="end-trophy" id="end-trophy">🏆</div>
+      <h2 id="end-rating">Geo Legend</h2>
+      <p class="end-subtitle">You finished your Kathmandu expedition</p>
+      <div class="final-score">
+        <strong id="final-score">0</strong>
+        <span>/ 25,000</span>
+      </div>
+      <div class="score-bar"><div id="score-bar-fill"></div></div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span>Total distance</span>
+          <strong id="stat-total-dist">—</strong>
+        </div>
+        <div class="stat-card">
+          <span>Best round</span>
+          <strong id="stat-best">—</strong>
+        </div>
+        <div class="stat-card">
+          <span>Avg distance</span>
+          <strong id="stat-avg-dist">—</strong>
+        </div>
+      </div>
+
+      <h3 class="breakdown-title">Round Scores</h3>
+      <div class="round-breakdown" id="round-breakdown"></div>
+
+      <div class="end-actions">
+        <button id="replay-btn" class="btn-primary">🔁 Play Again</button>
+      </div>
+    </div>
+  </section>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
